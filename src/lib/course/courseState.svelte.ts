@@ -1,0 +1,73 @@
+import { SvelteSet, SvelteMap } from 'svelte/reactivity';
+import type { Lesson } from './types';
+
+export class CourseState {
+	lessons = $state<Lesson[]>([]);
+	currentStageIndex = $state(0);
+	unlockedContentIds = new SvelteSet<string>();
+	contentCheckedState = new SvelteMap<string, boolean>();
+	isSidebarOpen = $state(false);
+
+	constructor(lessons: Lesson[]) {
+		this.lessons = lessons;
+		if (this.lessons && this.lessons.length > 0) {
+			const stage = this.lessons[this.currentStageIndex];
+			if (stage && !stage.simulator) {
+				this.unlockedContentIds.add(stage.id);
+			}
+		}
+	}
+
+	get currentStage() {
+		return this.lessons[this.currentStageIndex];
+	}
+
+	unlock(id: string) {
+		this.unlockedContentIds.add(id);
+	}
+
+	isUnlocked(id: string) {
+		return this.unlockedContentIds.has(id);
+	}
+
+	next() {
+		if (this.currentStageIndex < this.lessons.length - 1) {
+			this.currentStageIndex++;
+			const stage = this.lessons[this.currentStageIndex];
+			if (stage && !stage.simulator) {
+				this.unlock(stage.id);
+			}
+			return true;
+		} else {
+			console.log('恭喜！您已完成所有學習階段！');
+			return false;
+		}
+	}
+
+	prev() {
+		if (this.currentStageIndex > 0) {
+			this.currentStageIndex--;
+			return true;
+		}
+		return false;
+	}
+
+	async advanceStage(stageId: string) {
+		const current = this.lessons[this.currentStageIndex];
+		if (current && current.id === stageId) {
+			await new Promise((r) => setTimeout(r, 300));
+			if (this.currentStageIndex < this.lessons.length - 1) {
+				this.currentStageIndex++;
+				const nextStage = this.lessons[this.currentStageIndex];
+				if (nextStage && !nextStage.simulator) {
+					this.unlock(nextStage.id);
+				}
+				return true;
+			} else {
+				console.log('恭喜！您已完成所有學習階段！');
+				return false;
+			}
+		}
+		return false;
+	}
+}
